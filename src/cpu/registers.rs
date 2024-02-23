@@ -15,7 +15,7 @@ pub struct Registers {
 
 impl Registers {
     pub fn get_af(&self) -> u16 {
-        (self.a as u16) << 8 | u8::from(self.flags) as u16
+        (self.a as u16) << 8 | self.flags as u16
     }
     pub fn set_af(&mut self, value: u16) {
         self.a = ((value & 0xFF00) >> 8) as u8;

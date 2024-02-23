@@ -5,6 +5,7 @@ pub enum Instruction {
     AddrLd(AddrTarget, AddrSource),
     LdFF00(FF00Target),
     Ld16(PairTarget),
+    Ld16A(Ld16ATarget),
     Push(PairTarget),
     Pop(PairTarget),
     // ALU
@@ -19,7 +20,7 @@ pub enum Instruction {
     CallCond(FlagTarget),
     // JP,
     // JPCond(FlagTarget),
-    // JR,
+    JR,
     JRCond(FlagTarget),
     Ret,
     // Rotates
@@ -29,33 +30,21 @@ pub enum Instruction {
     Bit(Target, u8),
 }
 #[derive(Debug)]
-pub enum Target {
-    A, B, C, D, E, H, L, HL, N
-}
+pub enum Target { A, B, C, D, E, H, L, HL, N }
 #[derive(Debug)]
-pub enum Source {
-    A, B, C, D, E, H, L, HL, N
-}
+pub enum Source { A, B, C, D, E, H, L, HL, N }
 #[derive(Debug)]
-pub enum PairTarget {
-    AF, BC, DE, HL, SP
-}
+pub enum PairTarget { AF, BC, DE, HL, SP }
 #[derive(Debug)]
-pub enum FF00Target {
-    U8A, AU8, CA, AC
-}
+pub enum Ld16ATarget { NN, A }
 #[derive(Debug)]
-pub enum AddrTarget {
-    BC, DE, HLPlus, HLMinus, A
-}
+pub enum FF00Target { U8A, AU8, CA, AC }
 #[derive(Debug)]
-pub enum AddrSource {
-    BC, DE, HLPlus, HLMinus, A
-}
+pub enum AddrTarget { BC, DE, HLPlus, HLMinus, A }
 #[derive(Debug)]
-pub enum FlagTarget {
-    NZ, Z, NC, C
-}
+pub enum AddrSource { BC, DE, HLPlus, HLMinus, A }
+#[derive(Debug)]
+pub enum FlagTarget { NZ, Z, NC, C }
 
 impl Instruction {
     pub fn decode(byte: u8, prefixed: bool) -> Option<Instruction> {
@@ -176,6 +165,10 @@ impl Instruction {
             // LD SP, HL
             // LD HL, SP+n | LDHL SP, n
             // LD (nn), SP
+            // LD (u16), A
+            0xEA => Some(Instruction::Ld16A(Ld16ATarget::NN)),
+            // LD A, (u16)
+            0xFA => Some(Instruction::Ld16A(Ld16ATarget::A)),
             // PUSH r16
             0xF5 => Some(Instruction::Push(PairTarget::AF)),
             0xC5 => Some(Instruction::Push(PairTarget::BC)),
@@ -269,8 +262,9 @@ impl Instruction {
             // JP nn
             // JP cc, nn
             // JP (HL)
-            // JR n
-            // JR cc, n. If the condition is true, then add n to current address and jump to it
+            // JR u8
+            0x18 => Some(Instruction::JR),
+            // JR cc, u8. If the condition is true, then add n to current address and jump to it
             0x20 => Some(Instruction::JRCond(FlagTarget::NZ)),
             0x28 => Some(Instruction::JRCond(FlagTarget::Z)),
             0x30 => Some(Instruction::JRCond(FlagTarget::NC)),

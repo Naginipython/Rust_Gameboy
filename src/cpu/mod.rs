@@ -25,8 +25,8 @@ impl CPU {
     }
 
     pub fn step(&mut self, mem: &mut Memory) {
-        if self.pc > 0x2E && self.pc < 0x32 {
-            thread::sleep(Duration::from_millis(5000));
+        if self.pc > 0x69 && self.pc < 0x95 {
+            thread::sleep(Duration::from_millis(1000));
         }
         println!("Prior to current execution {}", self);
         //fetch
@@ -69,7 +69,7 @@ impl CPU {
                 match source {
                     Source::A => {
                         match target {
-                            Target::A => self.registers.a = self.registers.a,
+                            Target::A => (),
                             Target::B => self.registers.b = self.registers.a,
                             Target::C => self.registers.c = self.registers.a,
                             Target::D => self.registers.d = self.registers.a,
@@ -84,7 +84,7 @@ impl CPU {
                     Source::B => {
                         match target {
                             Target::A => self.registers.a = self.registers.b,
-                            Target::B => self.registers.b = self.registers.b,
+                            Target::B => (),
                             Target::C => self.registers.c = self.registers.b,
                             Target::D => self.registers.d = self.registers.b,
                             Target::E => self.registers.e = self.registers.b,
@@ -99,7 +99,7 @@ impl CPU {
                         match target {
                             Target::A => self.registers.a = self.registers.c,
                             Target::B => self.registers.b = self.registers.c,
-                            Target::C => self.registers.c = self.registers.c,
+                            Target::C => (),
                             Target::D => self.registers.d = self.registers.c,
                             Target::E => self.registers.e = self.registers.c,
                             Target::H => self.registers.h = self.registers.c,
@@ -114,7 +114,7 @@ impl CPU {
                             Target::A => self.registers.a = self.registers.d,
                             Target::B => self.registers.b = self.registers.d,
                             Target::C => self.registers.c = self.registers.d,
-                            Target::D => self.registers.d = self.registers.d,
+                            Target::D => (),
                             Target::E => self.registers.e = self.registers.d,
                             Target::H => self.registers.h = self.registers.d,
                             Target::L => self.registers.l = self.registers.d,
@@ -129,7 +129,7 @@ impl CPU {
                             Target::B => self.registers.b = self.registers.e,
                             Target::C => self.registers.c = self.registers.e,
                             Target::D => self.registers.d = self.registers.e,
-                            Target::E => self.registers.e = self.registers.e,
+                            Target::E => (),
                             Target::H => self.registers.h = self.registers.e,
                             Target::L => self.registers.l = self.registers.e,
                             Target::HL => mem.write_byte(self.registers.get_hl(), self.registers.e),
@@ -144,7 +144,7 @@ impl CPU {
                             Target::C => self.registers.c = self.registers.h,
                             Target::D => self.registers.d = self.registers.h,
                             Target::E => self.registers.e = self.registers.h,
-                            Target::H => self.registers.h = self.registers.h,
+                            Target::H => (),
                             Target::L => self.registers.l = self.registers.h,
                             Target::HL => mem.write_byte(self.registers.get_hl(), self.registers.h),
                             Target::N => unreachable!("ERROR: Somehow LD n, H")
@@ -159,7 +159,7 @@ impl CPU {
                             Target::D => self.registers.d = self.registers.l,
                             Target::E => self.registers.e = self.registers.l,
                             Target::H => self.registers.h = self.registers.l,
-                            Target::L => self.registers.l = self.registers.l,
+                            Target::L => (),
                             Target::HL => mem.write_byte(self.registers.get_hl(), self.registers.l),
                             Target::N => unreachable!("ERROR: Somehow LD n, L")
                         }
@@ -277,6 +277,14 @@ impl CPU {
             // LD SP, HL
             // LD HL, SP+n | LDHL SP, n
             // LD (nn), SP
+            // LD (u16), A
+            Instruction::Ld16A(target) => {
+                match target {
+                    Ld16ATarget::NN => mem.write_byte(self.nn(mem), self.registers.a),
+                    Ld16ATarget::A => self.registers.a = mem.read_byte(self.nn(mem)),
+                }
+                self.pc.wrapping_add(3)
+            },
             // PUSH r16
             Instruction::Push(target) => {
                 match target {
@@ -384,8 +392,6 @@ impl CPU {
             // ADD SP, n
             // INC r16
             Instruction::Inc16(target) => {
-                println!("DE: {:#04X}", self.registers.get_de());
-                println!("DE+1: {:#04X}", self.registers.get_de().wrapping_add(1));
                 match target {
                     PairTarget::BC => self.registers.set_bc(self.registers.get_bc().wrapping_add(1)),
                     PairTarget::DE => self.registers.set_de(self.registers.get_de().wrapping_add(1)),
@@ -432,9 +438,10 @@ impl CPU {
             // JP nn
             // JP cc, nn
             // JP (HL)
-            // JR n
+            // JR u8. Notes: Adds 2 to pc, because pc is usually added prior to exe. Also needed to convert n to i8 first, for proper conversion
+            Instruction::JR => ((self.pc+2) as i16 + i16::from(self.n(mem) as i8)) as u16,
             // JR cc, n. If the condition is true, then add n to current address and jump to it
-            Instruction::JRCond(condition) => {
+            Instruction::JRCond(condition) =>
                 if match condition {
                     FlagTarget::NZ => !self.registers.check_flag_z(),
                     FlagTarget::Z => self.registers.check_flag_z(),
@@ -447,7 +454,6 @@ impl CPU {
                 } else {
                     self.pc.wrapping_add(2)
                 }
-            },
 
             // ---------- Calls ----------
             // CALL nn

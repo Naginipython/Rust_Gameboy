@@ -5,7 +5,9 @@ use memory::Memory;
 
 pub mod memory;
 pub mod cpu;
+pub mod ppu;
 
+#[derive(Default)]
 pub struct Gameboy {
     memory: Memory,
     cpu: CPU,
@@ -24,7 +26,7 @@ impl Gameboy {
 
         for (i, byte) in rom.iter().enumerate() {
             // println!("{byte:#04X}");
-            self.memory.write_byte(0x0000+i as u16, *byte)
+            self.memory.write_byte(i as u16, *byte)
         }
         
         Ok(())
