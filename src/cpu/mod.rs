@@ -25,7 +25,7 @@ impl CPU {
     }
 
     pub fn step(&mut self, mem: &mut Memory) {
-        if self.pc > 0x32 && self.pc < 0x50 {
+        if self.pc > 0x2E && self.pc < 0x32 {
             thread::sleep(Duration::from_millis(5000));
         }
         println!("Prior to current execution {}", self);
@@ -50,8 +50,6 @@ impl CPU {
         self.pc = if let Some(instruction) = instr {
             self.execute(instruction, mem)
         } else {
-            let (l, r) = mem.ram.split_at(0xFF);
-            println!("{:?}", l);
             panic!("Unknown instruction found for: {byte:#04X}");
         };
     }
@@ -386,6 +384,8 @@ impl CPU {
             // ADD SP, n
             // INC r16
             Instruction::Inc16(target) => {
+                println!("DE: {:#04X}", self.registers.get_de());
+                println!("DE+1: {:#04X}", self.registers.get_de().wrapping_add(1));
                 match target {
                     PairTarget::BC => self.registers.set_bc(self.registers.get_bc().wrapping_add(1)),
                     PairTarget::DE => self.registers.set_de(self.registers.get_de().wrapping_add(1)),
